@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mtg
+  namespace: proxy-stack
+  labels:
+    app: mtg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mtg
+  template:
+    metadata:
+      labels:
+        app: mtg
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: mtg
+          image: nineseconds/mtg:2
+          args:
+            - "run"
+            - "/etc/mtg/config.toml"
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+              name: mtproto
+          volumeMounts:
+            - name: mtg-config
+              mountPath: /etc/mtg
+            - name: mtg-secret
+              mountPath: /run/secrets/mtproto
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 8443
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8443
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: mtg-config
+          configMap:
+            name: mtg-config
+        - name: mtg-secret
+          hostPath:
+            path: /run/agenix/mtproto-secret
+            type: FileOrCreate
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mtg-config
+  namespace: proxy-stack
+data:
+  config.toml: |
+    # MTG configuration
+    # Secret загружается из файла /run/secrets/mtproto/secret
+
+    [network]
+    bind-to = "0.0.0.0:8443"
+
+    [network.proxy]
+    # Весь трафик MTProto идёт через xray SOCKS5 для smart routing
+    socks5-address = "127.0.0.1:10808"

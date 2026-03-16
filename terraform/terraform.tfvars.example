@@ -1,0 +1,4 @@
+folder_id      = "b1g..."
+zone           = "ru-central1-a"
+ssh_public_key = "ssh-ed25519 AAAAC3..."
+image_id       = "fd8..."

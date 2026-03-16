@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amneziawg-config
+  namespace: proxy-stack
+data:
+  awg0.conf: |
+    [Interface]
+    Address = 10.10.0.1/24
+    ListenPort = 51820
+    # PrivateKey загружается из секрета (hostPath от agenix)
+
+    # Obfuscation параметры AmneziaWG
+    # Jc, Jmin, Jmax, S1, S2, H1, H2, H3, H4 — настраиваются при генерации ключей
+    # Будут загружены из секрета
+
+    # Пиры добавляются вручную или через скрипт
+    # [Peer]
+    # PublicKey = <client_public_key>
+    # AllowedIPs = 10.10.0.2/32

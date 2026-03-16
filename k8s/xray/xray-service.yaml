@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: xray-core
+  namespace: proxy-stack
+  labels:
+    app: xray-core
+spec:
+  type: ClusterIP
+  ports:
+    - port: 10808
+      targetPort: 10808
+      protocol: TCP
+      name: socks
+    - port: 12345
+      targetPort: 12345
+      protocol: TCP
+      name: tproxy
+  selector:
+    app: xray-core

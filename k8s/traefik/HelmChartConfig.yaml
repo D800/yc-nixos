@@ -1,0 +1,32 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  repo: https://traefik.github.io/charts
+  chart: traefik
+  targetNamespace: kube-system
+  valuesContent: |-
+    ports:
+      web:
+        port: 8000
+        expose: true
+        exposedPort: 80
+        protocol: TCP
+      websecure:
+        port: 8443
+        expose: true
+        exposedPort: 443
+        protocol: TCP
+        tls:
+          enabled: false
+      admin-port:
+        port: 2053
+        expose: true
+        exposedPort: 2053
+        protocol: TCP
+    additionalArguments:
+      - "--entrypoints.admin-port.address=:2053"
+    service:
+      type: LoadBalancer

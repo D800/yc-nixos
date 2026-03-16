@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: xray-geodata-updater
+  namespace: proxy-stack
+spec:
+  schedule: "0 4 * * *"  # Ежедневно в 4:00
+  concurrencyPolicy: Replace
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          containers:
+            - name: geodata-updater
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  echo "Downloading updated geodata..."
+
+                  # Скачиваем актуальные файлы
+                  apt-get update -qq && apt-get install -qq -y wget 2>/dev/null || true
+                  wget -q -O /tmp/geoip.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+                  wget -q -O /tmp/geosite.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+
+                  echo "Geodata downloaded, restarting xray-core..."
+
+                  # Рестарт xray pod для подхвата новых файлов
+                  kubectl rollout restart deployment/xray-core -n proxy-stack
+
+                  echo "Done"
+          restartPolicy: OnFailure
+          serviceAccountName: geodata-updater
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: geodata-updater
+  namespace: proxy-stack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: geodata-updater
+  namespace: proxy-stack
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: geodata-updater
+  namespace: proxy-stack
+subjects:
+  - kind: ServiceAccount
+    name: geodata-updater
+    namespace: proxy-stack
+roleRef:
+  kind: Role
+  name: geodata-updater
+  apiGroup: rbac.authorization.k8s.io

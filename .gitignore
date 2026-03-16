@@ -1,0 +1,8 @@
+*.qcow2
+result
+.terraform*
+*.tfstate*
+*.tfstate.backup
+secrets/*.age
+!secrets/secrets.nix
+.direnv/

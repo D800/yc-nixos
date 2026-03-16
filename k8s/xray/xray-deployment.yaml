@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xray-core
+  namespace: proxy-stack
+  labels:
+    app: xray-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xray-core
+  template:
+    metadata:
+      labels:
+        app: xray-core
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: xray-core
+          image: ghcr.io/xtls/xray-core:latest
+          args:
+            - "run"
+            - "-config"
+            - "/etc/xray/config.json"
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+                - NET_BIND_SERVICE
+          ports:
+            - containerPort: 12345
+              protocol: TCP
+              name: tproxy
+            - containerPort: 10808
+              protocol: TCP
+              name: socks
+          volumeMounts:
+            - name: xray-config
+              mountPath: /etc/xray
+            - name: geodata
+              mountPath: /usr/share/xray
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 10808
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 10808
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: xray-config
+          configMap:
+            name: xray-config
+        - name: geodata
+          emptyDir: {}
+      initContainers:
+        - name: geodata-init
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Downloading geodata files..."
+              wget -O /geodata/geoip.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+              wget -O /geodata/geosite.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+              echo "Geodata downloaded successfully"
+          volumeMounts:
+            - name: geodata
+              mountPath: /geodata
