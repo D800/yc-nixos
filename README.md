@@ -61,7 +61,9 @@ yc-nixos/
 └── scripts/                     # Build, upload, deploy скрипты
 ```
 
-## Быстрый старт
+## Предварительные требования
+
+### Nix
 
 ```bash
 sh <(curl -L https://nixos.org/nix/install) --daemon
@@ -69,6 +71,55 @@ sh <(curl -L https://nixos.org/nix/install) --daemon
 mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
+
+### Remote builder (для сборки с macOS)
+
+Образ qcow2 — это x86_64-linux, на macOS нужен удалённый Linux-билдер с KVM.
+
+**1. На Linux-машине (билдер):**
+
+```bash
+# Nix должен быть установлен
+# Пользователь билдера должен быть в trusted-users
+# /etc/nix/nix.conf:
+#   trusted-users = root dimam
+```
+
+**2. На macOS (клиент):**
+
+```bash
+# Добавить себя в trusted-users nix daemon
+echo 'extra-trusted-users = dimam' | sudo tee -a /etc/nix/nix.conf
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
+
+# Скопировать SSH ключ для root (nix daemon работает от root)
+sudo mkdir -p /var/root/.ssh
+sudo cp ~/.ssh/id_ed25519 /var/root/.ssh/nixos-builder-key
+sudo chmod 600 /var/root/.ssh/nixos-builder-key
+
+# Добавить host key билдера в known_hosts root'а
+sudo ssh -i /var/root/.ssh/nixos-builder-key dimam@10.0.1.133 "echo ok"
+```
+
+**3. Переменные окружения (опционально):**
+
+```bash
+export BUILDER_HOST="dimam@10.0.1.133"
+export BUILDER_KEY="/var/root/.ssh/nixos-builder-key"
+```
+
+### Yandex Cloud CLI и OpenTofu
+
+```bash
+# YC CLI
+curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+yc init
+
+# OpenTofu
+brew install opentofu
+```
+
+## Быстрый старт
 
 ### 1. Сборка образа
 

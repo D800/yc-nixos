@@ -16,10 +16,20 @@
 
   boot.kernelParams = [ "console=ttyS0,115200n8" ];
 
-  # Yandex Cloud VM disk
-  fileSystems."/" = {
-    device = "/dev/vda1";
-    fsType = "ext4";
+  # Диск определяется nixos-generators (qcow format) при сборке образа.
+  # При ручной установке раскомментировать:
+  # fileSystems."/" = {
+  #   device = "/dev/vda1";
+  #   fsType = "ext4";
+  # };
+
+  # Сеть через networkd (совместимо с cloud-init)
+  networking.useNetworkd = true;
+  networking.useDHCP = false;
+  systemd.network.enable = true;
+  systemd.network.networks."10-eth" = {
+    matchConfig.Type = "ether";
+    networkConfig.DHCP = "yes";
   };
 
   services.qemuGuest.enable = true;
